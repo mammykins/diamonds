@@ -5,5 +5,4 @@ How do we avoid getting hustled when buying a diamond? We use up-to-date prices 
 
 Join me in a journey where I plot all the variable interactions using ggpairs and then go on to use linear regression to model the price explaining 97% of the variation using a few predictors.  
 
-When you get that diamond quote be sure to compare?  
 N.B. Search for diamonds on r-bloggers and you'll find something similar.
