@@ -1,0 +1,81 @@
+---
+title: "Linear_Regression"
+author: "Matthew Gregory"
+date: "Tuesday, September 22, 2015"
+output: html_document
+---
+
+We are interested in predicting the price of a diamond based on 9 predictors. We want to know if we are getting ripped off for the price we pay for a diamond compared to historical prices.  
+First we load the appropriate libraries (makes sure you have them installed).
+
+```{r, echo=FALSE, warning=FALSE}
+library("ISLR")
+library("ggplot2")
+library("GGally")
+library("scales")
+library("memisc")
+library("dplyr")
+
+```
+
+Then we read in the diamonds data and assign it to an object called `mydata`. We inspect the structure of the dataframe using `str`.
+
+```{r, echo=FALSE}
+mydata <- diamonds
+str(mydata)
+```
+The dataframe seems to have the factors in the correct order and numerical variables assigned as such.  
+```{r, echo = TRUE}
+#WARNING takes a 10 minutes to run!
+#diasamp <- mydata[sample(1:length(mydata$price), 10000),]
+#ggpairs(diasamp, params = c(shape = I("."), outlier.shape = I(".")))
+```
+
+What's happening is that ggpairs is plotting each variable against the other in a pretty smart way. In the lower-triangle of the plot matrix, it uses grouped histograms for qualitative-qualitative pairs and scatterplots for quantitative-quantitative pairs.  In the upper-triangle, it plots grouped histograms for qualitative-qualitative pairs (using the x-instead of y-variable as the grouping factor), boxplots for qualitative-quantitative pairs, and provides the correlation for quantitative-quantitative pairs.  
+
+  
+Let's define a function to inspect the cube root of the carat, it's volume.
+
+```{r, echo=TRUE}
+cubroot_trans = function() trans_new("cubroot", transform= function(x) x^(1/3), inverse = function(x) x^3 )
+```
+With so many data points overfitting is a concern, let's jitter and make each point more transparent.
+
+```{r}
+p1 <- ggplot( data=mydata, aes(carat, price)) +
+    geom_point(alpha = 0.5, size = .75, position="jitter") +
+    scale_x_continuous(trans=cubroot_trans(), limits = c(0.2,3),
+        breaks = c(0.2, 0.5, 1, 2, 3)) +
+    scale_y_continuous(trans=log10_trans(), limits = c(350,15000),
+        breaks = c(350, 1000, 5000, 10000, 15000)) +
+    theme_bw() +
+    ggtitle("Price (log10) by Cubed-Root of Carat")
+p1
+```
+
+Our 2008 data has some problems but let's go ahead and model price using linear regression.
+
+```{r, echo = TRUE}
+
+mydata$logprice <- log(mydata$price)
+m1 <- lm(logprice~  I(carat^(1/3)), 
+    data=mydata[mydata$price < 10000,])
+m2 <- update(m1, ~ . + carat)
+m3 <- update(m2, ~ . + cut )
+m4 <- update(m3, ~ . + color + clarity)
+ 
+
+mtable(m1, m2, m3, m4)
+
+```
+We can use the `summary` function on each of these models to assess how much variation within the data they explain.
+  
+We can use the model to see if we are being charged too much for a diamond we are interested in.
+
+```{r, echo = TRUE}
+# Round 1.00 Very Good I VS1 $5,601
+thisDiamond <- data.frame(carat = 1.00, cut = "Very Good", color = "I", clarity="VS1")
+modEst <- predict(m4, newdata = thisDiamond, interval="prediction", level = .95)
+exp(modEst)
+```
+The predicted price from the model is lower than what they are asking for by $600 - hussle!
